@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches Drowz "space" background so the window + splash never flash white. -->
+    <color name="space">#FF05060F</color>
+    <color name="lavender">#FFC4B5FF</color>
+</resources>

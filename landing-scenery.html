@@ -1,0 +1,590 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>drowz — the reverse alarm</title>
+<style>
+  :root{
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --ink:#ECEAFB;
+    --ink-soft:#B9B4D6;
+    --ink-mute:#837FA6;
+    --lav:#C4B5FF;
+    --amber:#FFCF9E;
+    --line:rgba(196,181,255,.14);
+    --glass:rgba(255,255,255,.045);
+    --glass-line:rgba(255,255,255,.09);
+    --space:#05060f;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--space);color:var(--ink);
+    font-family:var(--sans);font-weight:400;line-height:1.6;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    overflow-x:hidden;
+  }
+  ::selection{background:rgba(196,181,255,.28)}
+  a{color:inherit;text-decoration:none}
+  :focus-visible{outline:2px solid var(--lav);outline-offset:3px;border-radius:3px}
+
+  /* ---- fixed canvas scene (sky + mountains + city) ---- */
+  .scene{position:fixed;inset:0;z-index:0;display:block}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(130% 100% at 50% 28%, transparent 48%, rgba(2,3,10,.55))}
+
+  /* ---- chrome ---- */
+  .topbar{
+    position:fixed;z-index:20;top:0;left:0;right:0;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1.1rem clamp(1.1rem,4vw,2.4rem);
+  }
+  .brand{font-size:1.12rem;font-weight:500;letter-spacing:.04em;color:var(--ink)}
+  .brand span{color:var(--lav);margin-right:.35em}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5em;
+    font:inherit;font-weight:500;font-size:.95rem;cursor:pointer;
+    padding:.72em 1.35em;border-radius:999px;border:1px solid transparent;
+    transition:transform .18s ease, background .18s ease, border-color .18s ease}
+  .btn:hover{transform:translateY(-1px)}
+  .btn-ghost{border-color:var(--glass-line);background:rgba(255,255,255,.03);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--lav)}
+  .btn-solid{background:var(--lav);color:#171334;font-weight:600}
+  .btn-solid:hover{background:#d3c7ff}
+
+  /* ---- layout ---- */
+  .content{position:relative;z-index:5;display:flex;flex-direction:column-reverse}
+  section{position:relative;padding-block:clamp(14vh,20vh,24vh)}
+  .wrap{width:min(1080px,90vw);margin-inline:auto}
+
+  .eyebrow{font-size:.76rem;text-transform:uppercase;letter-spacing:.3em;
+    color:var(--lav);font-weight:600;margin:0 0 1.2rem}
+
+  h1,h2,h3,h4{margin:0;font-weight:300;text-wrap:balance;letter-spacing:-.015em;line-height:1.06}
+  h1{font-size:clamp(2.7rem,7.4vw,5.4rem)}
+  h2{font-size:clamp(2rem,4.6vw,3.4rem)}
+  h3{font-size:clamp(1.4rem,2.6vw,1.9rem);font-weight:400}
+  p{margin:0}
+
+  /* ---- hero ---- */
+  .hero{min-height:100vh;display:flex;align-items:center;padding-top:12vh}
+  .hero h1{text-shadow:0 2px 44px rgba(15,10,35,.55)}
+  .hero .lead{margin-top:1.6rem;font-size:clamp(1.12rem,1.7vw,1.4rem);
+    color:var(--ink);max-width:44ch;text-shadow:0 1px 22px rgba(15,10,35,.5)}
+  .hero .lead b{font-weight:600}
+  .scrollcue{margin-top:3.4rem;display:inline-flex;align-items:center;gap:.7em;
+    font-size:.82rem;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-soft)}
+  .scrollcue .arrow{display:inline-block;animation:bob 2.2s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+  /* ---- manifesto ---- */
+  .manifesto blockquote{margin:0;font-family:var(--serif);font-style:italic;
+    font-size:clamp(1.7rem,3.6vw,2.9rem);line-height:1.28;font-weight:400;color:var(--ink);
+    text-wrap:balance;max-width:20ch}
+  .manifesto blockquote em{color:var(--amber);font-style:italic}
+  .manifesto p{margin-top:1.8rem;color:var(--ink-soft);max-width:52ch;font-size:1.1rem}
+
+  /* ---- ritual timeline ---- */
+  .ritual .head{margin-bottom:3.5rem;max-width:34ch}
+  .ritual .head p{margin-top:1rem;color:var(--ink-soft);font-size:1.1rem}
+  .timeline{position:relative;display:grid;gap:2.4rem;padding-left:2.2rem;max-width:56ch}
+  .timeline::before{content:"";position:absolute;left:.42rem;top:.5rem;bottom:.5rem;width:1px;
+    background:linear-gradient(180deg,var(--lav),rgba(196,181,255,.05))}
+  .step{position:relative}
+  .step .dot{position:absolute;left:-1.9rem;top:.35rem;width:.72rem;height:.72rem;border-radius:50%;
+    background:var(--lav);box-shadow:0 0 14px rgba(196,181,255,.9)}
+  .step .when{font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--ink-mute);font-variant-numeric:tabular-nums}
+  .step h4{margin-top:.35rem;font-size:1.25rem;font-weight:400;color:var(--ink)}
+  .step p{margin-top:.3rem;color:var(--ink-soft)}
+
+  /* ---- showcase / phone ---- */
+  .showcase .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(2rem,6vw,5rem);align-items:center}
+  .showcase .copy h2{margin-bottom:1.2rem}
+  .showcase .copy p{color:var(--ink-soft);font-size:1.12rem;max-width:40ch}
+  .phone-stage{display:flex;justify-content:center}
+  .phone{width:min(78vw,280px);aspect-ratio:9/19;border-radius:38px;padding:11px;
+    background:linear-gradient(160deg,#2b2748,#12132b);
+    border:1px solid rgba(255,255,255,.1);
+    box-shadow:0 40px 90px -30px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.06)}
+  .screen{height:100%;border-radius:28px;padding:1.5rem 1.35rem;
+    background:radial-gradient(120% 80% at 70% 0%, #241f45, #0a0b1e 70%);
+    display:flex;flex-direction:column;gap:.4rem;overflow:hidden;position:relative}
+  .screen .time{font-size:.82rem;color:var(--ink-mute);letter-spacing:.06em;font-variant-numeric:tabular-nums}
+  .ph-moon{width:46px;height:46px;border-radius:50%;margin:.4rem 0 .2rem;
+    background:radial-gradient(circle at 38% 34%,#fff,#cdd2ff 60%,transparent 74%);
+    box-shadow:0 0 26px rgba(196,181,255,.55)}
+  .screen h4{font-size:1.5rem;font-weight:300;color:var(--ink)}
+  .screen .st-sub{font-size:.86rem;color:var(--ink-soft);line-height:1.45}
+  .wave{display:flex;align-items:flex-end;gap:4px;height:34px;margin-top:.9rem}
+  .wave span{flex:1;background:linear-gradient(180deg,var(--lav),rgba(196,181,255,.25));
+    border-radius:3px;transform-origin:bottom;animation:pulse 2.4s ease-in-out infinite}
+  .wave span:nth-child(2){animation-delay:.2s}
+  .wave span:nth-child(3){animation-delay:.5s}
+  .wave span:nth-child(4){animation-delay:.15s}
+  .wave span:nth-child(5){animation-delay:.65s}
+  .wave span:nth-child(6){animation-delay:.35s}
+  .wave span:nth-child(7){animation-delay:.55s}
+  .wave span:nth-child(8){animation-delay:.1s}
+  @keyframes pulse{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}
+  .chips{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:auto}
+  .chip{font-size:.72rem;padding:.3em .7em;border-radius:999px;
+    background:rgba(196,181,255,.1);border:1px solid var(--line);color:var(--ink-soft)}
+
+  /* ---- modes ---- */
+  .modes .head{max-width:36ch;margin-bottom:3rem}
+  .modes .head p{margin-top:1rem;color:var(--ink-soft);font-size:1.1rem}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem}
+  .card{padding:2rem 1.9rem;border-radius:20px;background:var(--glass);
+    border:1px solid var(--glass-line);backdrop-filter:blur(8px)}
+  .card .tag{display:inline-block;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--lav);border:1px solid var(--line);border-radius:999px;padding:.32em .8em;margin-bottom:1.2rem}
+  .card--power .tag{color:var(--amber);border-color:rgba(255,207,158,.28)}
+  .card h3{margin-bottom:.7rem}
+  .card>p{color:var(--ink-soft);margin-bottom:1.3rem}
+  .card ul{margin:0;padding:0;list-style:none;display:grid;gap:.7rem}
+  .card li{position:relative;padding-left:1.5rem;color:var(--ink-soft);font-size:.98rem}
+  .card li::before{content:"";position:absolute;left:0;top:.55em;width:.42rem;height:.42rem;
+    border-radius:50%;background:var(--lav)}
+  .card--power li::before{background:var(--amber)}
+  .card small{display:block;margin-top:1.3rem;color:var(--ink-mute);font-size:.82rem;line-height:1.5}
+  .card code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.78rem;
+    background:rgba(255,255,255,.06);padding:.15em .45em;border-radius:5px;color:var(--amber)}
+
+  /* ---- cta ---- */
+  .cta{min-height:92vh;display:flex;flex-direction:column;justify-content:center;text-align:center}
+  .cta h2{font-size:clamp(2.8rem,8vw,6rem);margin-bottom:1.1rem}
+  .cta .sub{color:var(--ink-soft);font-size:1.15rem;margin-bottom:2.4rem}
+  .signup{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;margin-inline:auto;max-width:440px}
+  .signup input{flex:1;min-width:200px;font:inherit;font-size:1rem;color:var(--ink);
+    padding:.85em 1.1em;border-radius:999px;border:1px solid var(--glass-line);
+    background:rgba(255,255,255,.04)}
+  .signup input::placeholder{color:var(--ink-mute)}
+  .formnote{margin-top:1.3rem;min-height:1.4em;color:var(--lav);font-size:.95rem}
+
+  footer{padding:3rem 0 4rem;text-align:center;color:var(--ink-mute);font-size:.85rem}
+  footer .brand{font-size:1rem}
+
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+  @media (max-width:760px){
+    .showcase .wrap{grid-template-columns:1fr;gap:3rem}
+    .cards{grid-template-columns:1fr}
+  }
+  @media (max-width:600px){
+    section{padding-block:clamp(8vh,11vh,13vh)}
+    .hero{padding-top:16vh}
+    h1{font-size:clamp(2.9rem,11.5vw,3.7rem)}
+    .hero .lead{margin-top:1.3rem;font-size:1.14rem;max-width:34ch}
+    .scrollcue{margin-top:2.6rem}
+    h2{font-size:clamp(2.1rem,8.4vw,2.8rem)}
+    .manifesto blockquote{font-size:clamp(1.85rem,8.4vw,2.4rem);max-width:16ch}
+    .manifesto p{font-size:1.08rem}
+    .ritual .head,.modes .head,.timeline{max-width:100%}
+    .ritual .head p,.modes .head p,.showcase .copy p{font-size:1.08rem}
+    .step h4{font-size:1.3rem}
+    .step p{font-size:1.02rem}
+    .card{padding:1.7rem 1.5rem}
+    .cta h2{font-size:clamp(2.9rem,13vw,3.8rem)}
+    .cta .sub{font-size:1.1rem}
+  }
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    .scrollcue .arrow,.wave span{animation:none}
+    .wave span{transform:scaleY(.7)}
+  }
+</style>
+
+<canvas class="scene" aria-hidden="true"></canvas>
+<div class="vignette" aria-hidden="true"></div>
+
+<header class="topbar">
+  <a class="brand" href="#top"><span>☾</span>drowz</a>
+  <a class="btn btn-ghost" href="#cta">Get Drowz</a>
+</header>
+
+<main class="content">
+  <section class="hero" id="top">
+    <div class="wrap">
+      <p class="eyebrow">The reverse alarm</p>
+      <h1>The city is<br>turning in.</h1>
+      <p class="lead">An alarm drags you out of sleep. Drowz does the opposite —
+        at bedtime it quietly <b>dims the screen into the dark</b>,
+        <b>silences the noise</b>, and drifts a soundscape in until you're gone.</p>
+      <div class="scrollcue"><span class="arrow">↑</span> Drift up into the night</div>
+    </div>
+  </section>
+
+  <section class="manifesto">
+    <div class="wrap">
+      <blockquote>Your phone is the last <em>bright, loud</em> thing you see each night.</blockquote>
+      <p>Blue light, a full-color feed, one more buzz. Drowz turns the device that keeps
+        you up into one that helps you let go — on a schedule, automatically, every night.</p>
+    </div>
+  </section>
+
+  <section class="ritual">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">The wind-down</p>
+        <h2>A ritual, not a switch.</h2>
+        <p>Everything eases in gradually — the way falling asleep actually feels — then
+          undoes itself by morning.</p>
+      </div>
+      <div class="timeline">
+        <div class="step"><span class="dot"></span>
+          <p class="when">10:30 PM · bedtime</p>
+          <h4>A gentle nudge</h4>
+          <p>“Time to wind down.” No blaring alarm — just a quiet cue.</p>
+        </div>
+        <div class="step"><span class="dot"></span>
+          <p class="when">+ 0:30</p>
+          <h4>The screen dims</h4>
+          <p>Brightness rolls down on a slow ramp instead of snapping dark.</p>
+        </div>
+        <div class="step"><span class="dot"></span>
+          <p class="when">+ 1:00</p>
+          <h4>The screen sinks into the dark</h4>
+          <p>A dark overlay drops the screen below its usual minimum; Do Not Disturb
+            draws the curtains and the volume settles.</p>
+        </div>
+        <div class="step"><span class="dot"></span>
+          <p class="when">+ 1:00 → 20:00</p>
+          <h4>A soundscape rises, then leaves</h4>
+          <p>Soft sound fades in, carries you off, and fades back to silence.</p>
+        </div>
+        <div class="step"><span class="dot"></span>
+          <p class="when">7:00 AM</p>
+          <h4>Everything restored</h4>
+          <p>Brightness, color, sound and Do Not Disturb — all back to normal before
+            you wake.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="showcase">
+    <div class="wrap">
+      <div class="copy">
+        <p class="eyebrow">Designed to disappear</p>
+        <h2>Calm by design.</h2>
+        <p>One screen, no clutter. Set a bedtime, choose what Drowz should soften, and
+          never think about it again.</p>
+      </div>
+      <div class="phone-stage">
+        <div class="phone" aria-hidden="true">
+          <div class="screen">
+            <div class="time">10:30 PM</div>
+            <div class="ph-moon"></div>
+            <h4>Winding down</h4>
+            <p class="st-sub">Sleep well. Everything restores by 7:00 AM.</p>
+            <div class="wave">
+              <span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span>
+            </div>
+            <div class="chips">
+              <span class="chip">Dim</span>
+              <span class="chip">Extra dim</span>
+              <span class="chip">Quiet</span>
+              <span class="chip">Do Not Disturb</span>
+              <span class="chip">Soundscape</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="modes">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">Two ways to go dark</p>
+        <h2>Dark by default.<br>Grayscale if you mean it.</h2>
+        <p>Going darker than the phone allows is the hard part. So Drowz gives you a
+          path that just works — and one for the committed.</p>
+      </div>
+      <div class="cards">
+        <article class="card">
+          <span class="tag">For everyone</span>
+          <h3>Extra dim</h3>
+          <p>A dark overlay settles over the screen, taking it below its own minimum brightness.</p>
+          <ul>
+            <li>Works out of the box — one tap to allow</li>
+            <li>No developer tools, no risky permissions</li>
+            <li>Deeper than your phone can dim on its own</li>
+          </ul>
+        </article>
+        <article class="card card--power">
+          <span class="tag">For the committed</span>
+          <h3>True grayscale</h3>
+          <p>Real, system-wide monochrome — the whole phone drains to black and white.</p>
+          <ul>
+            <li>Genuine grayscale, not just a tint</li>
+            <li>One-time setup over <code>adb</code> to unlock</li>
+            <li>Turns off automatically each morning</li>
+          </ul>
+          <small>Android reserves true grayscale for the system, so it needs a single
+            developer-mode command once. Drowz walks you through it.</small>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta" id="cta">
+    <div class="wrap">
+      <h2>Sleep well.</h2>
+      <p class="sub">Drowz is coming to Android. Be the first to wind down.</p>
+      <form class="signup" id="signup">
+        <label class="sr-only" for="email">Email address</label>
+        <input id="email" name="email" type="email" placeholder="you@example.com" required>
+        <button class="btn btn-solid" type="submit">Notify me</button>
+      </form>
+      <p class="formnote" id="formnote" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <footer>
+    <a class="brand" href="#top"><span>☾</span>drowz</a>
+    <p style="margin-top:.6rem">A reverse alarm — it helps you fall asleep.</p>
+  </footer>
+</main>
+
+<script>
+(function(){
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var canvas = document.querySelector('.scene');
+  var ctx = canvas.getContext('2d');
+
+  var cssW, cssH, dpr, horizonY;
+  var stars = [], far = [], near = [], city = [];
+  var progress = 0;
+
+  function hexRgb(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function mix(c0,c1,t){var a=hexRgb(c0),b=hexRgb(c1);
+    return 'rgb('+Math.round(lerp(a[0],b[0],t))+','+Math.round(lerp(a[1],b[1],t))+','+Math.round(lerp(a[2],b[2],t))+')';}
+  function ease(t){return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;}
+  function clamp(v){return Math.min(1,Math.max(0,v));}
+
+  function ridge(baseY, amp, step){
+    var pts=[], x=-step;
+    while(x <= cssW+step){ pts.push({x:x, y:baseY - Math.random()*amp}); x += step; }
+    return pts;
+  }
+
+  function sizeCanvas(){
+    dpr = Math.min(2, devicePixelRatio || 1);
+    cssW = innerWidth; cssH = innerHeight;
+    canvas.width = cssW*dpr; canvas.height = cssH*dpr;
+    canvas.style.width = cssW+'px'; canvas.style.height = cssH+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    horizonY = cssH * 0.72;
+  }
+
+  var genW = 0;
+  function generate(){
+    genW = cssW;
+    var narrow = cssW < 640;               // fewer, chunkier buildings on phones
+
+    stars = [];
+    var sc = Math.round(cssW * horizonY / 5200);
+    for(var i=0;i<sc;i++){
+      stars.push({x:Math.random()*cssW, y:Math.random()*horizonY*0.92,
+        r:Math.random()*1.2+0.3, ph:Math.random()*6.28, sp:0.5+Math.random()});
+    }
+
+    far  = ridge(horizonY + 4,           cssH*0.13, cssW/7);
+    near = ridge(horizonY + cssH*0.035,  cssH*0.21, cssW/5);
+
+    city = [];
+    var x = 0;
+    while(x < cssW){
+      var w = (narrow?38:18) + Math.random()*(narrow?82:48);
+      var h = cssH * ((narrow?0.12:0.10) + Math.random()*0.28);
+      var b = {x:x, w:w, h:h, win:[]};
+      var cols = Math.max(1, Math.floor((w-8)/12));
+      var rows = Math.max(1, Math.floor((h-16)/16));
+      for(var r=0;r<rows;r++){
+        for(var c=0;c<cols;c++){
+          b.win.push({dx:6+c*12, dy:10+r*16, on:Math.random()<0.55,
+            ph:Math.random()*6.28, sp:0.6+Math.random(),
+            offAt:0.52+Math.random()*0.40, owl:false});
+        }
+      }
+      city.push(b);
+      x += w + 2 + Math.random()*(narrow?6:10);
+    }
+
+    // the whole city turns in: almost every window goes dark by deep night,
+    // but keep exactly two burning — the last souls awake.
+    var lit = [];
+    for(var bi=0;bi<city.length;bi++){
+      var ww = city[bi].win;
+      for(var wj=0;wj<ww.length;wj++){ if(ww[wj].on) lit.push(ww[wj]); }
+    }
+    for(var k=0;k<2 && lit.length;k++){
+      var idx = Math.floor(Math.random()*lit.length);
+      lit[idx].owl = true; lit[idx].offAt = 2;
+      lit.splice(idx,1);
+    }
+  }
+
+  function build(){ sizeCanvas(); generate(); }
+
+  function poly(pts, off, color){
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y + off);
+    for(var i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y + off);
+    ctx.lineTo(pts[pts.length-1].x, cssH+2);
+    ctx.lineTo(pts[0].x, cssH+2);
+    ctx.closePath();
+    ctx.fillStyle = color; ctx.fill();
+  }
+
+  function draw(t){
+    var p = ease(progress);
+
+    // --- sky ---
+    var g = ctx.createLinearGradient(0,0,0,cssH);
+    g.addColorStop(0,               mix('#59689F','#04060F', p));
+    g.addColorStop(0.48,            mix('#8E6EA6','#0A0C22', p));
+    g.addColorStop(horizonY/cssH,   mix('#F0A868','#0B0D1C', p));
+    g.addColorStop(1,               mix('#20263f','#04060f', p));
+    ctx.fillStyle = g; ctx.fillRect(0,0,cssW,cssH);
+
+    // --- warm horizon afterglow (fades as night falls) ---
+    var glowA = (1-p) * 0.55;
+    if(glowA > 0.02){
+      var rg = ctx.createRadialGradient(cssW*0.30, horizonY, 0, cssW*0.30, horizonY, cssW*0.62);
+      rg.addColorStop(0, 'rgba(255,150,80,'+glowA.toFixed(3)+')');
+      rg.addColorStop(1, 'rgba(255,150,80,0)');
+      ctx.fillStyle = rg; ctx.fillRect(0,0,cssW,horizonY+cssH*0.1);
+    }
+
+    // --- stars ---
+    var sa = clamp((progress - 0.10) / 0.55);
+    if(sa > 0){
+      for(var i=0;i<stars.length;i++){
+        var s = stars[i];
+        var tw = reduce ? 0.85 : 0.55 + 0.45*Math.sin(t*0.001*s.sp + s.ph);
+        ctx.globalAlpha = sa * tw;
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.2832);
+        ctx.fillStyle = '#EDEBFF'; ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // --- moon (rises) ---
+    var mp = clamp((progress - 0.30) / 0.70);
+    if(mp > 0){
+      var moonX = cssW*0.72, moonY = lerp(horizonY + cssH*0.08, horizonY - cssH*0.34, mp);
+      var moonR = cssH*0.045;
+      var mg = ctx.createRadialGradient(moonX, moonY, 0, moonX, moonY, moonR*3.4);
+      mg.addColorStop(0, 'rgba(210,214,255,'+(0.5*mp).toFixed(3)+')');
+      mg.addColorStop(1, 'rgba(210,214,255,0)');
+      ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(moonX, moonY, moonR*3.4, 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = 0.4 + 0.6*mp;
+      ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, 6.2832);
+      ctx.fillStyle = '#E9EBFF'; ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    // --- sun (sets behind the ridges) ---
+    var sp = clamp(progress / 0.55);
+    var sunA = clamp(1 - progress/0.5);
+    if(sunA > 0.01){
+      var sunX = cssW*0.30, sunY = lerp(horizonY - cssH*0.12, horizonY + cssH*0.16, sp);
+      var sunR = cssH*0.05;
+      var sg = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunR*4);
+      sg.addColorStop(0, 'rgba(255,190,110,'+(0.75*sunA).toFixed(3)+')');
+      sg.addColorStop(1, 'rgba(255,150,80,0)');
+      ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(sunX, sunY, sunR*4, 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = sunA;
+      ctx.beginPath(); ctx.arc(sunX, sunY, sunR, 0, 6.2832);
+      ctx.fillStyle = '#FFCB86'; ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    // --- mountains (parallax: sink a little as you climb into night) ---
+    poly(far,  p*cssH*0.07, mix('#464B7C','#0C1030', p));
+    poly(near, p*cssH*0.14, mix('#31335A','#080A20', p));
+
+    // --- city skyline + windows lighting up ---
+    var cityOff = p*cssH*0.22;
+    var cityColor = mix('#191B30','#05060F', Math.min(1,p*0.85));
+    var litIn = clamp((progress - 0.16) / 0.26);   // windows warm up through the evening
+    for(var b=0;b<city.length;b++){
+      var bd = city[b];
+      var top = horizonY - bd.h + cityOff;
+      ctx.fillStyle = cityColor;
+      ctx.fillRect(bd.x, top, bd.w, cssH - top + 4);
+      if(litIn > 0){
+        for(var wi=0; wi<bd.win.length; wi++){
+          var wn = bd.win[wi];
+          if(!wn.on || wn.dy > bd.h-10) continue;
+          // most windows switch off at their own bedtime; night owls stay lit
+          var lvl = litIn;
+          if(!wn.owl){
+            lvl *= (1 - clamp((progress - wn.offAt) / 0.06));
+          }
+          if(lvl <= 0.001) continue;
+          var fl = reduce ? 0.9 : 0.62 + 0.38*Math.sin(t*0.0018*wn.sp + wn.ph);
+          ctx.globalAlpha = lvl * fl;
+          ctx.fillStyle = '#FFD48A';
+          ctx.fillRect(bd.x + wn.dx, top + wn.dy, 4, 7);
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  function updateProgress(){
+    var max = document.body.scrollHeight - innerHeight;
+    progress = max > 0 ? clamp(1 - scrollY / max) : 0;
+  }
+
+  var ticking = false;
+  addEventListener('scroll', function(){
+    if(!ticking){
+      requestAnimationFrame(function(){
+        updateProgress();
+        if(reduce) draw(0);
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }, {passive:true});
+
+  addEventListener('resize', function(){
+    sizeCanvas();
+    if(Math.abs(cssW - genW) > 40) generate();   // ignore URL-bar height changes on mobile
+    updateProgress(); draw(0);
+  });
+
+  function loop(t){ draw(t); requestAnimationFrame(loop); }
+
+  // start at the bottom (dusk) so the reader rises up into the night
+  if('scrollRestoration' in history){ history.scrollRestoration = 'manual'; }
+  function toBottom(){
+    var html = document.documentElement, prev = html.style.scrollBehavior;
+    html.style.scrollBehavior = 'auto';
+    window.scrollTo(0, document.body.scrollHeight);
+    html.style.scrollBehavior = prev;
+  }
+
+  build();
+  toBottom();
+  updateProgress();
+  if(reduce){ draw(0); } else { requestAnimationFrame(loop); }
+  addEventListener('load', function(){ toBottom(); updateProgress(); });
+
+  // signup (demo only)
+  var form = document.getElementById('signup');
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    document.getElementById('formnote').textContent =
+      "You're on the list. We'll wake you once — when Drowz is ready.";
+    form.reset();
+  });
+})();
+</script>

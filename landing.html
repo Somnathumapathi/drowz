@@ -1,0 +1,433 @@
+<style>
+  :root{
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --ink:#ECEAFB;
+    --ink-soft:#B9B4D6;
+    --ink-mute:#837FA6;
+    --lav:#C4B5FF;
+    --amber:#FFCF9E;
+    --line:rgba(196,181,255,.14);
+    --glass:rgba(255,255,255,.045);
+    --glass-line:rgba(255,255,255,.09);
+    --space:#05060f;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--space);color:var(--ink);
+    font-family:var(--sans);font-weight:400;line-height:1.6;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    overflow-x:hidden;
+  }
+  ::selection{background:rgba(196,181,255,.28)}
+  a{color:inherit;text-decoration:none}
+  :focus-visible{outline:2px solid var(--lav);outline-offset:3px;border-radius:3px}
+
+  /* ---- fixed celestial backdrop ---- */
+  .sky{
+    position:fixed;inset:0;z-index:0;
+    background:
+      radial-gradient(130% 70% at 50% 128%, rgba(255,176,120,.12), transparent 60%),
+      linear-gradient(180deg,
+        var(--sky-top,#6E7CB0) 0%,
+        var(--sky-mid,#9A7DB0) 48%,
+        var(--sky-bottom,#E6A876) 100%);
+  }
+  .stars{position:fixed;inset:0;z-index:1;opacity:var(--star-opacity,0);
+    transition:opacity .25s linear;pointer-events:none}
+  .orb{
+    position:fixed;z-index:2;top:var(--orb-top,72vh);left:64%;
+    transform:translate(-50%,-50%);width:min(48vw,360px);aspect-ratio:1;border-radius:50%;
+    background:radial-gradient(circle at 38% 34%,
+      var(--orb-core,#FFF3D8), var(--orb-color,#FFC98A) 54%, transparent 72%);
+    filter:blur(1px) drop-shadow(0 0 var(--orb-glow,88px) var(--orb-color,#FFC98A));
+    opacity:.92;pointer-events:none;
+  }
+  .vignette{position:fixed;inset:0;z-index:3;pointer-events:none;
+    background:radial-gradient(125% 95% at 50% 34%, transparent 52%, rgba(2,3,10,.6))}
+
+  /* ---- chrome ---- */
+  .topbar{
+    position:fixed;z-index:20;top:0;left:0;right:0;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1.1rem clamp(1.1rem,4vw,2.4rem);
+  }
+  .brand{font-size:1.12rem;font-weight:500;letter-spacing:.04em;color:var(--ink)}
+  .brand span{color:var(--lav);margin-right:.35em}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5em;
+    font:inherit;font-weight:500;font-size:.95rem;cursor:pointer;
+    padding:.72em 1.35em;border-radius:999px;border:1px solid transparent;
+    transition:transform .18s ease, background .18s ease, border-color .18s ease}
+  .btn:hover{transform:translateY(-1px)}
+  .btn-ghost{border-color:var(--glass-line);background:rgba(255,255,255,.03);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--lav)}
+  .btn-solid{background:var(--lav);color:#171334;font-weight:600}
+  .btn-solid:hover{background:#d3c7ff}
+
+  /* ---- layout ---- */
+  .content{position:relative;z-index:5}
+  section{position:relative;padding-block:clamp(14vh,20vh,24vh)}
+  .wrap{width:min(1080px,90vw);margin-inline:auto}
+  .prose{width:min(60ch,90vw)}
+
+  .eyebrow{font-size:.76rem;text-transform:uppercase;letter-spacing:.3em;
+    color:var(--lav);font-weight:600;margin:0 0 1.2rem}
+
+  h1,h2,h3,h4{margin:0;font-weight:300;text-wrap:balance;letter-spacing:-.015em;line-height:1.06}
+  h1{font-size:clamp(2.7rem,7.4vw,5.4rem)}
+  h2{font-size:clamp(2rem,4.6vw,3.4rem)}
+  h3{font-size:clamp(1.4rem,2.6vw,1.9rem);font-weight:400}
+  p{margin:0}
+
+  /* ---- hero ---- */
+  .hero{min-height:100vh;display:flex;align-items:center;padding-top:12vh}
+  .hero h1{text-shadow:0 2px 40px rgba(20,15,45,.45)}
+  .hero .lead{margin-top:1.6rem;font-size:clamp(1.12rem,1.7vw,1.4rem);
+    color:var(--ink);max-width:44ch;text-shadow:0 1px 20px rgba(20,15,45,.4)}
+  .hero .lead b{font-weight:600}
+  .scrollcue{margin-top:3.4rem;display:inline-flex;align-items:center;gap:.7em;
+    font-size:.82rem;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-soft)}
+  .scrollcue .arrow{display:inline-block;animation:bob 2.2s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+
+  /* ---- manifesto ---- */
+  .manifesto blockquote{margin:0;font-family:var(--serif);font-style:italic;
+    font-size:clamp(1.7rem,3.6vw,2.9rem);line-height:1.28;font-weight:400;color:var(--ink);
+    text-wrap:balance;max-width:20ch}
+  .manifesto blockquote em{color:var(--amber);font-style:italic}
+  .manifesto p{margin-top:1.8rem;color:var(--ink-soft);max-width:52ch;font-size:1.1rem}
+
+  /* ---- ritual timeline ---- */
+  .ritual .head{margin-bottom:3.5rem;max-width:34ch}
+  .ritual .head p{margin-top:1rem;color:var(--ink-soft);font-size:1.1rem}
+  .timeline{position:relative;display:grid;gap:2.4rem;padding-left:2.2rem;max-width:56ch}
+  .timeline::before{content:"";position:absolute;left:.42rem;top:.5rem;bottom:.5rem;width:1px;
+    background:linear-gradient(180deg,var(--lav),rgba(196,181,255,.05))}
+  .step{position:relative}
+  .step .dot{position:absolute;left:-1.9rem;top:.35rem;width:.72rem;height:.72rem;border-radius:50%;
+    background:var(--lav);box-shadow:0 0 14px rgba(196,181,255,.9)}
+  .step .when{font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--ink-mute);font-variant-numeric:tabular-nums}
+  .step h4{margin-top:.35rem;font-size:1.25rem;font-weight:400;color:var(--ink)}
+  .step p{margin-top:.3rem;color:var(--ink-soft)}
+
+  /* ---- showcase / phone ---- */
+  .showcase .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(2rem,6vw,5rem);align-items:center}
+  .showcase .copy h2{margin-bottom:1.2rem}
+  .showcase .copy p{color:var(--ink-soft);font-size:1.12rem;max-width:40ch}
+  .phone-stage{display:flex;justify-content:center}
+  .phone{width:min(78vw,280px);aspect-ratio:9/19;border-radius:38px;padding:11px;
+    background:linear-gradient(160deg,#2b2748,#12132b);
+    border:1px solid rgba(255,255,255,.1);
+    box-shadow:0 40px 90px -30px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.06)}
+  .screen{height:100%;border-radius:28px;padding:1.5rem 1.35rem;
+    background:radial-gradient(120% 80% at 70% 0%, #241f45, #0a0b1e 70%);
+    display:flex;flex-direction:column;gap:.4rem;overflow:hidden;position:relative}
+  .screen .time{font-size:.82rem;color:var(--ink-mute);letter-spacing:.06em;font-variant-numeric:tabular-nums}
+  .ph-moon{width:46px;height:46px;border-radius:50%;margin:.4rem 0 .2rem;
+    background:radial-gradient(circle at 38% 34%,#fff,#cdd2ff 60%,transparent 74%);
+    box-shadow:0 0 26px rgba(196,181,255,.55)}
+  .screen h4{font-size:1.5rem;font-weight:300;color:var(--ink)}
+  .screen .st-sub{font-size:.86rem;color:var(--ink-soft);line-height:1.45}
+  .wave{display:flex;align-items:flex-end;gap:4px;height:34px;margin-top:.9rem}
+  .wave span{flex:1;background:linear-gradient(180deg,var(--lav),rgba(196,181,255,.25));
+    border-radius:3px;transform-origin:bottom;animation:pulse 2.4s ease-in-out infinite}
+  .wave span:nth-child(2){animation-delay:.2s}
+  .wave span:nth-child(3){animation-delay:.5s}
+  .wave span:nth-child(4){animation-delay:.15s}
+  .wave span:nth-child(5){animation-delay:.65s}
+  .wave span:nth-child(6){animation-delay:.35s}
+  .wave span:nth-child(7){animation-delay:.55s}
+  .wave span:nth-child(8){animation-delay:.1s}
+  @keyframes pulse{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}
+  .chips{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:auto}
+  .chip{font-size:.72rem;padding:.3em .7em;border-radius:999px;
+    background:rgba(196,181,255,.1);border:1px solid var(--line);color:var(--ink-soft)}
+
+  /* ---- modes ---- */
+  .modes .head{max-width:36ch;margin-bottom:3rem}
+  .modes .head p{margin-top:1rem;color:var(--ink-soft);font-size:1.1rem}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem}
+  .card{padding:2rem 1.9rem;border-radius:20px;background:var(--glass);
+    border:1px solid var(--glass-line);backdrop-filter:blur(8px)}
+  .card .tag{display:inline-block;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--lav);border:1px solid var(--line);border-radius:999px;padding:.32em .8em;margin-bottom:1.2rem}
+  .card--power .tag{color:var(--amber);border-color:rgba(255,207,158,.28)}
+  .card h3{margin-bottom:.7rem}
+  .card>p{color:var(--ink-soft);margin-bottom:1.3rem}
+  .card ul{margin:0;padding:0;list-style:none;display:grid;gap:.7rem}
+  .card li{position:relative;padding-left:1.5rem;color:var(--ink-soft);font-size:.98rem}
+  .card li::before{content:"";position:absolute;left:0;top:.55em;width:.42rem;height:.42rem;
+    border-radius:50%;background:var(--lav)}
+  .card--power li::before{background:var(--amber)}
+  .card small{display:block;margin-top:1.3rem;color:var(--ink-mute);font-size:.82rem;line-height:1.5}
+  .card code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.78rem;
+    background:rgba(255,255,255,.06);padding:.15em .45em;border-radius:5px;color:var(--amber)}
+
+  /* ---- cta ---- */
+  .cta{min-height:92vh;display:flex;flex-direction:column;justify-content:center;text-align:center}
+  .cta h2{font-size:clamp(2.8rem,8vw,6rem);margin-bottom:1.1rem}
+  .cta .sub{color:var(--ink-soft);font-size:1.15rem;margin-bottom:2.4rem}
+  .signup{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;margin-inline:auto;max-width:440px}
+  .signup input{flex:1;min-width:200px;font:inherit;font-size:1rem;color:var(--ink);
+    padding:.85em 1.1em;border-radius:999px;border:1px solid var(--glass-line);
+    background:rgba(255,255,255,.04)}
+  .signup input::placeholder{color:var(--ink-mute)}
+  .formnote{margin-top:1.3rem;min-height:1.4em;color:var(--lav);font-size:.95rem}
+
+  footer{padding:3rem 0 4rem;text-align:center;color:var(--ink-mute);font-size:.85rem}
+  footer .brand{font-size:1rem}
+
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+  @media (max-width:760px){
+    .showcase .wrap{grid-template-columns:1fr;gap:3rem}
+    .cards{grid-template-columns:1fr}
+    .orb{left:72%}
+  }
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    .scrollcue .arrow,.wave span{animation:none}
+    .wave span{transform:scaleY(.7)}
+  }
+</style>
+
+<div class="sky" aria-hidden="true"></div>
+<canvas class="stars" aria-hidden="true"></canvas>
+<div class="orb" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+
+<header class="topbar">
+  <a class="brand" href="#top"><span>☾</span>drowz</a>
+  <a class="btn btn-ghost" href="#cta">Get Drowz</a>
+</header>
+
+<main class="content">
+  <section class="hero" id="top">
+    <div class="wrap">
+      <p class="eyebrow">The reverse alarm</p>
+      <h1>Drowz walks<br>you into sleep.</h1>
+      <p class="lead">An alarm drags you out of sleep. Drowz does the opposite —
+        at bedtime it quietly <b>dims the screen into the dark</b>,
+        <b>silences the noise</b>, and drifts a soundscape in until you're gone.</p>
+      <div class="scrollcue">Scroll to nightfall <span class="arrow">↓</span></div>
+    </div>
+  </section>
+
+  <section class="manifesto">
+    <div class="wrap">
+      <blockquote>Your phone is the last <em>bright, loud</em> thing you see each night.</blockquote>
+      <p>Blue light, a full-color feed, one more buzz. Drowz turns the device that keeps
+        you up into one that helps you let go — on a schedule, automatically, every night.</p>
+    </div>
+  </section>
+
+  <section class="ritual">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">The wind-down</p>
+        <h2>A ritual, not a switch.</h2>
+        <p>Everything eases in gradually — the way falling asleep actually feels — then
+          undoes itself by morning.</p>
+      </div>
+      <div class="timeline">
+        <div class="step"><span class="dot"></span>
+          <p class="when">10:30 PM · bedtime</p>
+          <h4>A gentle nudge</h4>
+          <p>“Time to wind down.” No blaring alarm — just a quiet cue.</p>
+        </div>
+        <div class="step"><span class="dot"></span>
+          <p class="when">+ 0:30</p>
+          <h4>The screen dims</h4>
+          <p>Brightness rolls down on a slow ramp instead of snapping dark.</p>
+        </div>
+        <div class="step"><span class="dot"></span>
+          <p class="when">+ 1:00</p>
+          <h4>The screen sinks into the dark</h4>
+          <p>A dark overlay drops the screen below its usual minimum; Do Not Disturb
+            draws the curtains and the volume settles.</p>
+        </div>
+        <div class="step"><span class="dot"></span>
+          <p class="when">+ 1:00 → 20:00</p>
+          <h4>A soundscape rises, then leaves</h4>
+          <p>Soft sound fades in, carries you off, and fades back to silence.</p>
+        </div>
+        <div class="step"><span class="dot"></span>
+          <p class="when">7:00 AM</p>
+          <h4>Everything restored</h4>
+          <p>Brightness, color, sound and Do Not Disturb — all back to normal before
+            you wake.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="showcase">
+    <div class="wrap">
+      <div class="copy">
+        <p class="eyebrow">Designed to disappear</p>
+        <h2>Calm by design.</h2>
+        <p>One screen, no clutter. Set a bedtime, choose what Drowz should soften, and
+          never think about it again.</p>
+      </div>
+      <div class="phone-stage">
+        <div class="phone" aria-hidden="true">
+          <div class="screen">
+            <div class="time">10:30 PM</div>
+            <div class="ph-moon"></div>
+            <h4>Winding down</h4>
+            <p class="st-sub">Sleep well. Everything restores by 7:00 AM.</p>
+            <div class="wave">
+              <span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span>
+            </div>
+            <div class="chips">
+              <span class="chip">Dim</span>
+              <span class="chip">Extra dim</span>
+              <span class="chip">Quiet</span>
+              <span class="chip">Do Not Disturb</span>
+              <span class="chip">Soundscape</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="modes">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">Two ways to go dark</p>
+        <h2>Dark by default.<br>Grayscale if you mean it.</h2>
+        <p>Going darker than the phone allows is the hard part. So Drowz gives you a
+          path that just works — and one for the committed.</p>
+      </div>
+      <div class="cards">
+        <article class="card">
+          <span class="tag">For everyone</span>
+          <h3>Extra dim</h3>
+          <p>A dark overlay settles over the screen, taking it below its own minimum brightness.</p>
+          <ul>
+            <li>Works out of the box — one tap to allow</li>
+            <li>No developer tools, no risky permissions</li>
+            <li>Deeper than your phone can dim on its own</li>
+          </ul>
+        </article>
+        <article class="card card--power">
+          <span class="tag">For the committed</span>
+          <h3>True grayscale</h3>
+          <p>Real, system-wide monochrome — the whole phone drains to black and white.</p>
+          <ul>
+            <li>Genuine grayscale, not just a tint</li>
+            <li>One-time setup over <code>adb</code> to unlock</li>
+            <li>Turns off automatically each morning</li>
+          </ul>
+          <small>Android reserves true grayscale for the system, so it needs a single
+            developer-mode command once. Drowz walks you through it.</small>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta" id="cta">
+    <div class="wrap">
+      <h2>Sleep well.</h2>
+      <p class="sub">Drowz is coming to Android. Be the first to wind down.</p>
+      <form class="signup" id="signup">
+        <label class="sr-only" for="email">Email address</label>
+        <input id="email" name="email" type="email" placeholder="you@example.com" required>
+        <button class="btn btn-solid" type="submit">Notify me</button>
+      </form>
+      <p class="formnote" id="formnote" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <footer>
+    <a class="brand" href="#top"><span>☾</span>drowz</a>
+    <p style="margin-top:.6rem">A reverse alarm — it helps you fall asleep.</p>
+  </footer>
+</main>
+
+<script>
+(function(){
+  var root = document.documentElement;
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // gradient stops: [start (dusk / ground), end (deep space)]
+  var stops = {
+    top:    ['#6E7CB0', '#03040C'],
+    mid:    ['#9A7DB0', '#0A0C22'],
+    bottom: ['#E6A876', '#05070F']
+  };
+  function hexRgb(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+  function lp(a,b,t){return Math.round(a+(b-a)*t);}
+  function mix(c0,c1,t){var a=hexRgb(c0),b=hexRgb(c1);return 'rgb('+lp(a[0],b[0],t)+','+lp(a[1],b[1],t)+','+lp(a[2],b[2],t)+')';}
+  function ease(t){return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;}
+  function clamp(v){return Math.min(1,Math.max(0,v));}
+
+  function render(){
+    var max = document.body.scrollHeight - innerHeight;
+    var prog = max > 0 ? clamp(scrollY / max) : 0;
+    var p = ease(prog);
+    root.style.setProperty('--sky-top', mix(stops.top[0], stops.top[1], p));
+    root.style.setProperty('--sky-mid', mix(stops.mid[0], stops.mid[1], p));
+    root.style.setProperty('--sky-bottom', mix(stops.bottom[0], stops.bottom[1], p));
+    root.style.setProperty('--star-opacity', clamp((prog - 0.12) / 0.62).toFixed(3));
+    root.style.setProperty('--orb-top', (72 - 58 * p).toFixed(2) + 'vh');
+    root.style.setProperty('--orb-color', mix('#FFC98A', '#E3E7FF', p));
+    root.style.setProperty('--orb-core', mix('#FFF3D8', '#FFFFFF', p));
+    root.style.setProperty('--orb-glow', (92 - 44 * p).toFixed(0) + 'px');
+  }
+
+  var ticking = false;
+  addEventListener('scroll', function(){
+    if(!ticking){ requestAnimationFrame(function(){ render(); ticking=false; }); ticking=true; }
+  }, {passive:true});
+
+  // starfield
+  var canvas = document.querySelector('.stars');
+  var ctx = canvas.getContext('2d');
+  var stars = [];
+  function sizeStars(){
+    var dpr = Math.min(2, devicePixelRatio || 1);
+    canvas.width = innerWidth * dpr; canvas.height = innerHeight * dpr;
+    canvas.style.width = innerWidth + 'px'; canvas.style.height = innerHeight + 'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    var count = Math.round(innerWidth * innerHeight / 5200);
+    stars = [];
+    for(var i=0;i<count;i++){
+      stars.push({x:Math.random()*innerWidth, y:Math.random()*innerHeight,
+        r:Math.random()*1.2+0.3, ph:Math.random()*Math.PI*2, sp:0.5+Math.random()});
+    }
+  }
+  function draw(t){
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+    for(var i=0;i<stars.length;i++){
+      var s = stars[i];
+      var tw = reduce ? 0.85 : 0.55 + 0.45*Math.sin(t*0.001*s.sp + s.ph);
+      ctx.globalAlpha = tw;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.2832);
+      ctx.fillStyle = '#EDEBFF'; ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+  function loop(t){ draw(t); requestAnimationFrame(loop); }
+
+  addEventListener('resize', function(){ sizeStars(); if(reduce) draw(0); render(); });
+  sizeStars();
+  render();
+  if(reduce){ draw(0); } else { requestAnimationFrame(loop); }
+
+  // signup (demo only)
+  var form = document.getElementById('signup');
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    document.getElementById('formnote').textContent =
+      "You're on the list. We'll wake you once — when Drowz is ready.";
+    form.reset();
+  });
+})();
+</script>

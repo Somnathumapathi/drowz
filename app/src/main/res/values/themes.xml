@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Bare platform theme: all real styling is done in Compose (DrowzTheme).
+         We only need a no-action-bar shell with the dark space background so the
+         app never flashes a light window before Compose draws. -->
+    <style name="Theme.Drowz" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/space</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
